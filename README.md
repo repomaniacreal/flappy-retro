@@ -19,9 +19,9 @@ None. You only need a modern web browser (Chrome, Firefox, Safari, or Edge, rece
 
 ## Installation
 
-There is nothing to install — the whole game lives in a single HTML file (`flappy.html`) with its CSS and JavaScript inlined.
+There is nothing to install — the whole game lives in a single HTML file (`index.html`) with its CSS and JavaScript inlined.
 
-1. Download `flappy.html`.
+1. Download `index.html`.
 2. Place it anywhere on your computer or inside your project's folder.
 
 That's it — there's no package to `npm install` and no build step to run.
@@ -29,7 +29,7 @@ That's it — there's no package to `npm install` and no build step to run.
 ## Running the game
 
 **Option 1 — Open directly**
-Double-click `flappy.html`, or open it from your browser with `File → Open`. This works out of the box for normal play.
+Double-click `index.html`, or open it from your browser with `File → Open`. This works out of the box for normal play.
 
 **Option 2 — Serve it locally (optional, recommended for sharing/testing)**
 Some browser features (like the clipboard fallback used by the Share button) behave more reliably when the page is served over `http://` instead of opened as a local `file://` path. Any static file server works, for example:
@@ -42,7 +42,7 @@ python3 -m http.server 8000
 npx serve .
 ```
 
-Then open `http://localhost:8000/flappy.html` in your browser.
+Then open `http://localhost:8000/index.html` in your browser.
 
 **Option 3 — Host it anywhere**
 Since it's a single static HTML file, you can drop it into any static host (GitHub Pages, Netlify, Vercel, S3, etc.) with no configuration.
@@ -58,12 +58,12 @@ Since it's a single static HTML file, you can drop it into any static host (GitH
 ## Project structure
 
 ```
-flappy.html   # Everything: markup, styles, and game logic in one file
+index.html   # Everything: markup, styles, and game logic in one file
 ```
 
 ## Configuration
 
-Gameplay feel can be tuned by editing the constants at the top of the `<script>` block in `flappy.html`:
+Gameplay feel can be tuned by editing the constants at the top of the `<script>` block in `index.html`:
 
 | Constant       | Description                                  |
 |----------------|-----------------------------------------------|

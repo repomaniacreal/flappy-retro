@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Flappy Bird — Retro Arcade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  /* ============ TOKENS ============ */
+  :root{
+    --cream:#FFFADF;
+    --panel-1:#F7F0AB;
+    --panel-2:#F1EBA6;
+    --panel-3:#EBE5A1;
+    --panel-dim:#E3DC99;
+    --ink:#1E1C00;
+    --ink-soft:#414938;
+    --ink-mute:#717A66;
+    --brown-deep:#261900;
+    --gold-text:#7A5900;
+    --gold-text-2:#6B4E00;
+    --sky:#70C5CE;
+    --sky-deep:#53A6AF;
+    --green:#73BE2E;
+    --green-light:#8DDB49;
+    --green-light-2:#A8F862;
+    --green-dark:#386B00;
+    --green-darker:#244800;
+    --gold:#FCBC0B;
+    --bird-yellow:#F8B800;
+    --bird-hi:#FFF185;
+    --bird-belly:#E29300;
+    --beak:#FF8979;
+    --beak-shadow:#B4271D;
+    --red:#B4271D;
+    --red-dark:#410000;
+    --dirt:#DED895;
+    --dirt-dark:#CCA854;
+    --white:#FFFFFF;
+    --black:#000000;
+    --page-bg:#e9e4d3;
+    --page-bg-2:#d8d2ba;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --page-bg:#17140c;
+      --page-bg-2:#0c0a06;
+    }
+  }
+  :root[data-theme="dark"]{
+    --page-bg:#17140c;
+    --page-bg-2:#0c0a06;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  html{scroll-padding-top:env(safe-area-inset-top,0px);}
+  body{
+    margin:0;
+    min-height:100dvh;
+    background:radial-gradient(circle at 50% 0%, var(--page-bg-2), var(--page-bg));
+    font-family:'Space Mono', ui-monospace, monospace;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px) 0;
+    -webkit-tap-highlight-color:transparent;
+    overflow-x:hidden;
+  }
+  img,svg{display:block;}
+  button{font-family:inherit;}
+
+  .upp{text-transform:uppercase;}
+  .mono-b{font-weight:700;}
+
+  /* ============ APP SHELL ============ */
+  #stage{
+    width:100%;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:0;
+  }
+  @media (min-width:480px){
+    #stage{ padding:28px 16px; }
+  }
+  .app-shell{
+    position:relative;
+    width:100%;
+    max-width:420px;
+    min-height:100dvh;
+    background:var(--cream);
+    color:var(--ink);
+    overflow:hidden;
+    isolation:isolate;
+  }
+  @media (min-width:480px){
+    .app-shell{
+      min-height:min(860px, calc(100dvh - 56px));
+      height:min(860px, calc(100dvh - 56px));
+      border:5px solid var(--ink);
+      border-radius:20px;
+      box-shadow:0 24px 0 -6px rgba(0,0,0,0.12), 0 30px 40px rgba(0,0,0,0.35);
+    }
+  }
+
+  .screen{
+    display:none;
+    flex-direction:column;
+    height:100%;
+    min-height:100dvh;
+    overflow-y:auto;
+    overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;
+  }
+  @media (min-width:480px){
+    .screen{ min-height:0; }
+  }
+  .screen.active{ display:flex; }
+
+  /* ============ GENERIC PIXEL PIECES ============ */
+  .chip{
+    display:inline-flex; align-items:center; gap:4px;
+    background:var(--panel-1); padding:4px 8px;
+    box-shadow:2px 2px 0 #000;
+  }
+  .chip-txt{ font-size:9px; letter-spacing:.6px; }
+
+  .square-btn{
+    display:flex; align-items:center; justify-content:center;
+    background:var(--panel-1); box-shadow:2px 2px 0 #000;
+    border:none; cursor:pointer; color:var(--ink);
+  }
+  .square-btn:active{ transform:translate(2px,2px); box-shadow:0 0 0 #000; }
+  .square-btn svg{ width:14px; height:14px; }
+
+  .bolt{ width:11px; height:14px; color:var(--brown-deep); }
+  .icon-14{ width:14px; height:14px; }
+  .icon-16{ width:16px; height:16px; }
+
+  /* ============ HOME SCREEN ============ */
+  #screen-home .home-body{ flex:1 1 auto; position:relative; }
+  .home-bg{
+    position:absolute; inset:0; z-index:0;
+    background:var(--sky); overflow:hidden;
+  }
+  .home-cloud{
+    position:absolute; background:rgba(255,255,255,.85);
+    box-shadow:0 4px 0 rgba(0,0,0,.12);
+  }
+  .home-city{
+    position:absolute; left:0; right:0; bottom:88px;
+    display:flex; align-items:flex-end; justify-content:space-between;
+    padding:0 8px; opacity:.32;
+  }
+  .home-city span{ display:block; background:var(--sky-deep); }
+  .home-ground{ position:absolute; left:0; right:0; bottom:0; }
+  .grass-strip{
+    height:6px;
+    background:repeating-linear-gradient(90deg, var(--green-darker) 0 8px, var(--green) 8px 16px);
+    box-shadow: inset 0 2px 0 var(--green-light-2);
+  }
+  .dirt-strip{
+    height:82px;
+    background:repeating-linear-gradient(45deg, var(--dirt) 0 10px, var(--dirt-dark) 10px 20px);
+    box-shadow: inset 0 4px 0 var(--green-darker);
+  }
+
+  .home-content{
+    position:relative; z-index:1;
+    padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px));
+    display:flex; flex-direction:column; align-items:center;
+    flex:1 1 auto;
+  }
+  .home-toprow{ width:100%; display:flex; align-items:center; justify-content:space-between; }
+  .sfx-btn{ width:32px; height:32px; }
+  .sfx-btn svg{ width:14px; height:14px; }
+
+  .logo-wrap{ position:relative; padding-top:22px; }
+  .logo{
+    font-size:34px; line-height:1; letter-spacing:1px; text-align:center;
+    color:var(--bird-yellow);
+    text-shadow:3px 3px 0 var(--ink), -1px -1px 0 var(--white);
+  }
+  .logo small{ display:block; font-size:16px; letter-spacing:4px; color:var(--white); text-shadow:2px 2px 0 var(--ink); margin-top:2px;}
+  .logo-spark{
+    position:absolute; top:-8px; right:-10px; width:13px; height:13px;
+    background:var(--gold); box-shadow:2px 2px 0 #000; transform:rotate(45deg);
+    animation:spark-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes spark-pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
+
+  .mascot-wrap{ padding-top:14px; display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .mascot-stage{ height:70px; display:flex; align-items:center; cursor:pointer; }
+  .mascot-stage .bird{ animation:bob 1.6s ease-in-out infinite; }
+  @keyframes bob{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-10px); } }
+  .hint-tag{
+    display:flex; align-items:center; gap:4px;
+    background:rgba(227,220,153,.85); padding:2px 8px; box-shadow:2px 2px 0 #000;
+  }
+  .hint-dot{ width:7px; height:7px; background:var(--red); flex:0 0 auto; }
+
+  .record-card{
+    width:100%; margin-top:16px; background:var(--panel-1);
+    box-shadow:4px 4px 0 #000; padding:10px; display:flex; flex-direction:column; gap:8px;
+  }
+  .record-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .record-left{ display:flex; align-items:center; gap:8px; }
+  .medal-badge{
+    position:relative; width:44px; height:44px; flex:0 0 auto;
+    background:var(--gold); box-shadow:2px 2px 0 #000;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .medal-badge svg{ width:20px; height:20px; color:var(--brown-deep); }
+  .medal-tag{
+    position:absolute; bottom:-5px; right:-5px; background:var(--red); color:var(--white);
+    font-size:8px; letter-spacing:.5px; padding:1px 4px; box-shadow:1px 1px 0 #000; white-space:nowrap;
+  }
+  .record-labels .lbl{ font-size:9px; letter-spacing:.6px; color:var(--ink-soft); }
+  .record-labels .val{ display:flex; align-items:baseline; gap:4px; }
+  .record-labels .val .b{ font-size:16px; }
+  .record-labels .val .n{ font-size:20px; color:var(--green-dark); letter-spacing:1px; }
+  .tier-pill{
+    background:var(--panel-3); box-shadow:2px 2px 0 #000; padding:4px 8px;
+    display:flex; flex-direction:column; align-items:flex-end;
+  }
+  .tier-pill .lbl{ font-size:9px; letter-spacing:.6px; color:var(--gold-text); }
+  .tier-pill .val{ font-size:13px; letter-spacing:.5px; }
+
+  .progress-row{ display:flex; align-items:center; justify-content:space-between; }
+  .progress-row span{ font-size:9px; letter-spacing:.4px; color:var(--ink-soft); }
+  .progress-track{ width:100%; height:11px; background:var(--panel-dim); box-shadow:inset 1px 1px 0 var(--ink-mute); position:relative; overflow:hidden; }
+  .progress-fill{ height:100%; background:var(--green); transition:width .4s ease; }
+
+  .cta-primary{
+    width:100%; margin-top:16px; background:var(--green); border:none; cursor:pointer;
+    box-shadow:0 6px 0 #000; padding:14px 16px;
+    display:flex; align-items:center; justify-content:center; gap:8px; position:relative;
+  }
+  .cta-primary:active{ transform:translateY(6px); box-shadow:0 0 0 #000; }
+  .cta-primary .lbl{ color:var(--green-darker); font-size:17px; letter-spacing:1px; text-shadow:1px 1px 0 rgba(255,255,255,.35); }
+  .cta-primary svg{ width:14px; height:16px; color:var(--green-darker); }
+  .cta-dot{ position:absolute; right:16px; width:8px; height:8px; background:var(--green-darker); }
+
+  .secondary-grid{ width:100%; margin-top:8px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .sec-btn{
+    border:none; cursor:pointer; padding:8px 4px; display:flex; flex-direction:column; align-items:center; gap:4px;
+    box-shadow:0 4px 0 #000;
+  }
+  .sec-btn:active{ transform:translateY(4px); box-shadow:0 0 0 #000; }
+  .sec-btn svg{ width:17px; height:17px; }
+  .sec-btn span{ font-size:9px; letter-spacing:.5px; }
+  .sec-btn.gold{ background:var(--gold); color:var(--gold-text-2); }
+  .sec-btn.tan{ background:var(--panel-2); color:var(--ink); }
+
+  .micro-row{ width:100%; margin-top:16px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .micro-actions{ display:flex; gap:8px; }
+  .micro-btn{
+    display:flex; align-items:center; gap:4px; background:var(--panel-1); box-shadow:2px 2px 0 #000;
+    border:none; padding:4px 8px; cursor:pointer; color:var(--ink);
+  }
+  .micro-btn:active{ transform:translate(2px,2px); box-shadow:0 0 0 #000; }
+  .micro-btn svg{ width:12px; height:12px; }
+  .micro-btn span{ font-size:9px; letter-spacing:.5px; }
+  .ver{ font-size:9px; letter-spacing:.4px; color:var(--ink-soft); text-align:right; }
+
+  /* ============ GAMEPLAY SCREEN ============ */
+  #screen-game .game-content{
+    flex:1 1 auto; padding:calc(12px + env(safe-area-inset-top,0px)) 16px calc(20px + env(safe-area-inset-bottom,0px));
+    display:flex; flex-direction:column; gap:12px; align-items:center;
+  }
+  .hud{ width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .hud-best{ display:flex; align-items:center; gap:6px; background:var(--panel-1); box-shadow:3px 3px 0 #000; padding:6px 10px; }
+  .hud-best svg{ width:9px; height:18px; color:var(--gold-text-2); }
+  .hud-best .lbl{ font-size:9px; letter-spacing:.5px; color:var(--ink-soft); }
+  .hud-best .val{ font-size:16px; }
+  .hud-score{ background:var(--white); box-shadow:4px 4px 0 #000; padding:2px 18px; }
+  .hud-score span{ font-size:28px; letter-spacing:2px; }
+  .hud-pause{ width:44px; height:44px; flex:0 0 auto; background:var(--gold); box-shadow:0 4px 0 #000; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--brown-deep); }
+  .hud-pause:active{ transform:translateY(4px); box-shadow:0 0 0 #000; }
+  .hud-pause svg{ width:14px; height:14px; }
+
+  .viewport{
+    width:100%; aspect-ratio:9/14; max-height:62vh;
+    background:var(--sky); position:relative; overflow:hidden;
+    box-shadow:6px 6px 0 #000; touch-action:manipulation; cursor:pointer; user-select:none;
+  }
+  .vp-clouds{ position:absolute; inset:0; overflow:hidden; opacity:.9; }
+  .vp-cloud{ position:absolute; background:rgba(255,255,255,.8); box-shadow:0 4px 0 rgba(0,0,0,.12); }
+  .vp-city{ position:absolute; left:0; right:0; bottom:64px; display:flex; align-items:flex-end; justify-content:space-between; padding:0 8px; opacity:.35; }
+  .vp-city span{ display:block; background:var(--sky-deep); }
+
+  .pipe{ position:absolute; width:52px; }
+  .pipe-seg{ position:absolute; left:0; right:0; background:var(--green); box-shadow:inset 0 0 0 2px #000, inset 6px 0 0 var(--green-light); }
+  .pipe-cap{ position:absolute; left:-6px; right:-6px; height:16px; background:var(--green); box-shadow:inset 0 0 0 2px #000, inset 6px 0 0 var(--green-light); }
+
+  .bird{ position:absolute; width:36px; height:28px; left:22%; will-change:transform; }
+  .bird-body{ position:absolute; inset:0; background:var(--bird-yellow); box-shadow:0 0 0 2px #000; }
+  .bird-crest{ position:absolute; left:4px; top:0; width:16px; height:6px; background:var(--bird-hi); }
+  .bird-belly{ position:absolute; left:0; bottom:0; width:24px; height:6px; background:var(--bird-belly); }
+  .bird-eye{ position:absolute; right:8px; top:4px; width:14px; height:12px; background:var(--white); box-shadow:0 0 0 1.5px #000; }
+  .bird-pupil{ position:absolute; right:0; bottom:0; width:6px; height:8px; background:#000; }
+  .bird-wing{ position:absolute; left:4px; top:10px; width:14px; height:12px; background:var(--white); box-shadow:0 0 0 1.5px #000, inset 0 -2px 0 var(--panel-dim); transform-origin:top left; transition:transform .09s ease; }
+  .bird.flap .bird-wing{ transform:rotate(-28deg) translateY(-2px); }
+  .bird-beak{ position:absolute; right:-12px; bottom:4px; width:16px; height:12px; background:var(--beak); box-shadow:0 0 0 2px #000, inset 0 -2px 0 var(--beak-shadow); }
+
+  .vp-ground{ position:absolute; left:0; right:0; bottom:0; height:64px; box-shadow:0 -4px 0 #000; overflow:hidden; }
+  .vp-grass{ height:14px; background:repeating-linear-gradient(90deg, var(--green) 0 9px, var(--green-light) 9px 18px); box-shadow:inset 0 -2px 0 var(--green-dark); background-size:36px 100%; }
+  .vp-dirt{ height:50px; background:repeating-linear-gradient(-45deg, var(--dirt) 0 9px, var(--dirt-dark) 9px 18px); background-size:36px 36px; }
+  .scrolling{ animation:scrollx 1.1s linear infinite; }
+  .paused .scrolling, .paused .vp-cloud{ animation-play-state:paused; }
+
+  .tap-hint{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+    transition:opacity .25s ease; pointer-events:none;
+  }
+  .tap-hint.hidden{ opacity:0; }
+  .tap-card{ background:var(--white); box-shadow:4px 4px 0 #000; padding:8px 16px; display:flex; align-items:center; gap:6px; }
+  .tap-card svg{ width:15px; height:18px; }
+  .tap-card span{ font-size:13px; letter-spacing:.6px; }
+  .tap-sub{ background:var(--panel-1); box-shadow:2px 2px 0 #000; padding:6px 8px; font-size:9px; letter-spacing:.5px; color:var(--ink-soft); }
+
+  .pause-overlay{
+    position:absolute; inset:0; background:rgba(30,28,0,.45); display:none;
+    align-items:center; justify-content:center; flex-direction:column; gap:6px;
+  }
+  .paused .pause-overlay{ display:flex; }
+  .pause-overlay .big{ font-size:26px; color:var(--white); letter-spacing:2px; text-shadow:2px 2px 0 #000; }
+  .pause-overlay .small{ font-size:10px; color:var(--panel-1); letter-spacing:.6px; }
+
+  .hit-flash{ position:absolute; inset:0; background:var(--red); opacity:0; pointer-events:none; }
+  .hit-flash.on{ animation:flashfade .35s ease-out; }
+  @keyframes flashfade{ 0%{ opacity:.55; } 100%{ opacity:0; } }
+
+  .controls-row{ width:100%; display:flex; align-items:center; gap:8px; }
+  .flap-btn{
+    flex:1 1 auto; background:var(--green); border:none; cursor:pointer; box-shadow:0 5px 0 #000;
+    padding:13px; display:flex; align-items:center; justify-content:center; gap:8px; min-width:0;
+  }
+  .flap-btn:active{ transform:translateY(5px); box-shadow:0 0 0 #000; }
+  .flap-btn svg{ width:12px; height:14px; color:var(--green-darker); flex:0 0 auto; }
+  .flap-btn span{ font-size:15px; letter-spacing:.7px; color:var(--green-darker); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sfx-btn-lg{ width:52px; height:52px; flex:0 0 auto; background:var(--panel-1); box-shadow:0 5px 0 #000; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--ink); }
+  .sfx-btn-lg:active{ transform:translateY(5px); box-shadow:0 0 0 #000; }
+  .sfx-btn-lg svg{ width:16px; height:16px; }
+
+  .ticker{ width:100%; background:var(--panel-2); box-shadow:4px 4px 0 #000; padding:10px 12px; display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+  .ticker-left{ display:flex; align-items:center; gap:8px; min-width:0; }
+  .ticker-tag{ background:var(--green-dark); color:var(--white); font-size:9px; letter-spacing:.5px; padding:2px 8px; flex:0 0 auto; }
+  .ticker-txt{ font-size:11px; color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ticker-rank{ font-size:9px; letter-spacing:.8px; color:var(--gold-text); flex:0 0 auto; }
+
+  /* ============ GAME OVER SCREEN ============ */
+  #screen-over .over-content{ flex:1 1 auto; padding:calc(12px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px)); display:flex; flex-direction:column; gap:14px; }
+
+  .crash{ width:100%; height:138px; border-radius:8px; overflow:hidden; position:relative; background:linear-gradient(180deg, var(--sky) 0%, var(--sky) 68%, var(--dirt) 68%, var(--dirt-dark) 100%); box-shadow:0 4px 6px rgba(0,0,0,.15); }
+  .crash-pipe{ position:absolute; bottom:32px; width:34px; background:var(--green); box-shadow:inset 0 0 0 2px #000, inset 5px 0 0 var(--green-light); }
+  .crash-cloud{ position:absolute; background:rgba(255,255,255,.55); }
+  .crash-vignette{ position:absolute; inset:0; background:rgba(53,50,0,.32); backdrop-filter:blur(.4px); display:flex; align-items:center; justify-content:center; }
+  .crash-tag{ position:absolute; top:44px; background:rgba(53,50,0,.82); color:var(--white); font-size:9px; letter-spacing:1px; padding:2px 8px; border-radius:4px; }
+  .crash-bird{ position:absolute; left:50%; top:52%; width:40px; height:32px; transform:translate(-50%,-50%) rotate(150deg); }
+  .crash-bird .bird-wing{ transition:none; }
+  .sweat{ position:absolute; background:var(--white); border-radius:50% 50% 50% 0; box-shadow:0 1px 0 #000; }
+
+  .banner-wrap{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .banner{ position:relative; background:var(--red); box-shadow:0 6px 0 var(--red-dark); padding:9px 26px; border-radius:2px; }
+  .banner::before{ content:""; position:absolute; inset:2px; border-left:2px solid rgba(255,180,169,.6); border-top:2px solid rgba(255,180,169,.6); pointer-events:none; }
+  .banner h1{ margin:0; font-size:26px; color:var(--white); letter-spacing:1.5px; text-shadow:0 2px 0 var(--red-dark); text-align:center; }
+  .banner-sub{ display:flex; align-items:center; gap:6px; }
+  .banner-sub i{ width:6px; height:6px; background:var(--red); flex:0 0 auto; }
+  .banner-sub span{ font-size:9px; letter-spacing:.9px; color:var(--ink-soft); animation:blinktxt 1.4s ease-in-out infinite; }
+  @keyframes blinktxt{ 0%,100%{ opacity:1; } 50%{ opacity:.4; } }
+
+  .score-panel{ position:relative; background:var(--panel-2); border-radius:8px; box-shadow:0 6px 0 var(--brown-deep); padding:16px; display:flex; flex-direction:column; gap:8px; }
+  .rivet{ position:absolute; width:8px; height:8px; background:var(--panel-dim); box-shadow:1px 1px 0 var(--brown-deep), inset 1px 1px 0 var(--white); }
+  .rivet.tl{ top:8px; left:8px; } .rivet.tr{ top:8px; right:8px; } .rivet.bl{ bottom:8px; left:8px; } .rivet.br{ bottom:8px; right:8px; }
+
+  .panel-grid{ display:flex; gap:16px; align-items:stretch; }
+  .medal-slot{ flex:1 1 0; background:var(--panel-1); border-radius:4px; box-shadow:inset 0 2px 4px rgba(0,0,0,.15); display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:8px; gap:6px; }
+  .medal-slot .lbl{ font-size:10px; letter-spacing:.6px; color:var(--gold-text); }
+  .medal-gfx{ width:60px; height:60px; border-radius:4px; background:var(--white); box-shadow:0 3px 0 var(--panel-dim); display:flex; align-items:center; justify-content:center; position:relative; }
+  .medal-gfx .ring{ width:38px; height:38px; border-radius:50%; box-shadow:0 2px 0 var(--brown-deep); display:flex; align-items:center; justify-content:center; }
+  .medal-gfx svg{ width:20px; height:20px; }
+  .medal-name{ background:var(--gold); border-radius:4px; padding:4px 8px; font-size:9px; letter-spacing:.4px; color:var(--brown-deep); }
+
+  .score-col{ flex:1 1 0; display:flex; flex-direction:column; gap:8px; justify-content:center; }
+  .score-box{ background:var(--panel-1); border-radius:4px; box-shadow:inset 0 2px 3px rgba(0,0,0,.12); padding:6px 8px; text-align:right; }
+  .score-box .row{ display:flex; align-items:center; justify-content:space-between; }
+  .score-box .lbl{ font-size:9px; letter-spacing:.4px; color:var(--gold-text); }
+  .score-box .num{ font-size:26px; letter-spacing:-.5px; }
+  .score-box.best .num{ color:var(--green-dark); }
+  .new-badge{ background:var(--red); color:var(--white); font-size:8px; letter-spacing:.4px; padding:1px 4px; border-radius:4px; display:none; }
+  .new-badge.show{ display:inline-block; }
+
+  .strip{ background:var(--panel-3); border-radius:4px; display:flex; align-items:center; justify-content:space-between; padding:6px 12px; }
+  .strip-left{ display:flex; align-items:center; gap:6px; }
+  .strip-left svg{ width:11px; height:13px; color:var(--ink-soft); }
+  .strip-left span{ font-size:9px; letter-spacing:.4px; color:var(--ink-soft); }
+  .strip-val{ font-size:16px; }
+
+  .btn-replay{ width:100%; background:var(--green); border:none; border-radius:8px; cursor:pointer; box-shadow:0 6px 0 var(--green-darker); padding:13px; display:flex; align-items:center; justify-content:center; gap:8px; }
+  .btn-replay:active{ transform:translateY(6px); box-shadow:0 0 0 var(--green-darker); }
+  .btn-replay svg{ width:11px; height:14px; color:var(--green-darker); }
+  .btn-replay span{ font-size:16px; letter-spacing:.8px; color:var(--green-darker); }
+
+  .btn-row2{ display:flex; gap:8px; }
+  .btn-share, .btn-ranks{ flex:1 1 0; border:none; border-radius:8px; cursor:pointer; padding:12px; display:flex; align-items:center; justify-content:center; gap:6px; }
+  .btn-share{ background:var(--gold); box-shadow:0 5px 0 var(--gold-text-2); }
+  .btn-share:active, .btn-ranks:active{ transform:translateY(5px); box-shadow:0 0 0; }
+  .btn-share svg{ width:13px; height:14px; color:var(--gold-text-2); }
+  .btn-share span{ font-size:13px; letter-spacing:.5px; color:var(--gold-text-2); }
+  .btn-ranks{ background:var(--panel-3); box-shadow:0 5px 0 var(--ink-mute); }
+  .btn-ranks svg{ width:13px; height:13px; color:var(--ink); }
+  .btn-ranks span{ font-size:13px; letter-spacing:.5px; color:var(--ink); }
+
+  .rivals{ background:var(--panel-1); border-radius:8px; padding:8px; display:flex; flex-direction:column; gap:8px; }
+  .rivals-head{ display:flex; align-items:center; justify-content:space-between; }
+  .rivals-head-l{ display:flex; align-items:center; gap:4px; }
+  .rivals-head-l svg{ width:11px; height:12px; color:var(--gold-text); }
+  .rivals-head-l span{ font-size:9px; letter-spacing:.4px; color:var(--gold-text); }
+  .rivals-head-r{ font-size:9px; letter-spacing:.4px; color:var(--green-dark); }
+  .rival-row{ background:var(--panel-2); border-radius:4px; display:flex; align-items:center; justify-content:space-between; padding:6px 10px; }
+  .rival-row.you{ background:var(--green-light-2); }
+  .rival-l{ display:flex; align-items:center; gap:8px; }
+  .rival-rank{ width:16px; font-size:9px; color:var(--gold-text); }
+  .rival-row.you .rival-rank{ color:var(--green-dark); }
+  .rival-avatar{ width:20px; height:20px; border-radius:4px; background:var(--green-dark); color:var(--white); display:flex; align-items:center; justify-content:center; font-size:9px; }
+  .rival-row.you .rival-avatar{ background:var(--white); color:var(--green-dark); }
+  .rival-name{ font-size:12px; }
+  .rival-score{ font-size:11px; letter-spacing:.4px; }
+
+  /* toast */
+  #toast{
+    position:fixed; left:50%; bottom:max(18px, env(safe-area-inset-bottom,0px)); transform:translateX(-50%) translateY(12px);
+    background:var(--ink); color:var(--cream); font-size:12px; letter-spacing:.4px;
+    padding:10px 16px; box-shadow:3px 3px 0 #000; z-index:999; opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease;
+    max-width:88vw; text-align:center;
+  }
+  #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  @keyframes scrollx{ from{ background-position-x:0; } to{ background-position-x:-36px; } }
+</style>
+</head>
+<body>
+<div id="stage">
+<div class="app-shell" id="appShell">
+
+  <!-- ============ HOME SCREEN ============ -->
+  <section class="screen active" id="screen-home">
+    <div class="home-body">
+      <div class="home-bg" aria-hidden="true">
+        <div class="home-cloud" style="width:80px;height:26px;left:8%;top:12px;"></div>
+        <div class="home-cloud" style="width:60px;height:20px;right:6%;top:48px;"></div>
+        <div class="home-city">
+          <span style="width:11%;height:60px;"></span>
+          <span style="width:8%;height:96px;"></span>
+          <span style="width:14%;height:48px;"></span>
+          <span style="width:9%;height:110px;"></span>
+          <span style="width:12%;height:80px;"></span>
+          <span style="width:10%;height:56px;"></span>
+        </div>
+        <div class="home-ground">
+          <div class="grass-strip"></div>
+          <div class="dirt-strip"></div>
+        </div>
+      </div>
+
+      <div class="home-content">
+        <div class="home-toprow">
+          <div class="chip"><svg class="bolt" viewBox="0 0 11 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.5 0L0 8h4l-1 6 6.5-8H5.5L6.5 0z" fill="currentColor"/></svg><span class="chip-txt upp mono-b">Season 04 Active</span></div>
+          <button class="square-btn sfx-btn" id="btnHomeSfx2" aria-label="Toggle sound"></button>
+        </div>
+
+        <div class="logo-wrap">
+          <div class="logo mono-b upp">FLAPPY<small>BIRD</small></div>
+          <div class="logo-spark"></div>
+        </div>
+
+        <div class="mascot-wrap">
+          <div class="mascot-stage" id="mascotStage"></div>
+          <div class="hint-tag"><span class="hint-dot"></span><span class="chip-txt upp mono-b">Tap Bird To Flap</span></div>
+        </div>
+
+        <div class="record-card">
+          <div class="record-row">
+            <div class="record-left">
+              <div class="medal-badge">
+                <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 1l2.2 4.6L17 6.3l-3.5 3.4.8 4.8L10 12.2l-4.3 2.3.8-4.8L3 6.3l4.8-.7L10 1z" fill="currentColor"/></svg>
+                <span class="medal-tag mono-b" id="homeMedalTag">—</span>
+              </div>
+              <div class="record-labels">
+                <div class="lbl upp mono-b">Arcade Record</div>
+                <div class="val"><span class="b mono-b upp">Best</span><span class="n mono-b" id="homeBest">0</span></div>
+              </div>
+            </div>
+            <div class="tier-pill">
+              <span class="lbl upp mono-b">Global Tier</span>
+              <span class="val mono-b" id="homeTier"># 50,000</span>
+            </div>
+          </div>
+          <div class="progress-block">
+            <div class="progress-row"><span class="upp mono-b" id="homeNextMedal">NEXT MEDAL: BRONZE</span><span class="mono-b" id="homeProgTxt">0/10 PIPES</span></div>
+            <div class="progress-track" style="margin-top:4px;"><div class="progress-fill" id="homeProgFill" style="width:0%;"></div></div>
+          </div>
+        </div>
+
+        <button class="cta-primary" id="btnStart">
+          <svg viewBox="0 0 13 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 0l13 8-13 8V0z" fill="currentColor"/></svg>
+          <span class="lbl mono-b upp">Start Game</span>
+          <span class="cta-dot"></span>
+        </button>
+
+        <div class="secondary-grid">
+          <button class="sec-btn gold" data-toast="New skins coming soon!">
+            <svg viewBox="0 0 18 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 0L6 3H2l2 3-3 2 2 3v3h12v-3l2-3-3-2 2-3h-4L9 0z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+            <span class="upp mono-b">Skins</span>
+          </button>
+          <button class="sec-btn tan" data-toast="Full leaderboard coming soon!">
+            <svg viewBox="0 0 18 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="9" width="4" height="6" fill="currentColor"/><rect x="7" y="4" width="4" height="11" fill="currentColor"/><rect x="13" y="0" width="4" height="15" fill="currentColor"/></svg>
+            <span class="upp mono-b">Scores</span>
+          </button>
+          <button class="sec-btn tan" data-toast="Medal collection coming soon!">
+            <svg viewBox="0 0 15 19" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7.5" cy="12" r="6.5" stroke="currentColor" stroke-width="1.4"/><path d="M4 1l1.5 6M11 1L9.5 7" stroke="currentColor" stroke-width="1.4"/><path d="M7.5 8.5l1.3 2.7 3 .4-2.2 2.1.5 3-2.6-1.4-2.6 1.4.5-3-2.2-2.1 3-.4L7.5 8.5z" fill="currentColor"/></svg>
+            <span class="upp mono-b">Medals</span>
+          </button>
+        </div>
+
+        <div class="micro-row">
+          <div class="micro-actions">
+            <button class="micro-btn" data-toast="Thanks! ⭐"><svg viewBox="0 0 12 12" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M6 0l1.8 3.6 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4L.2 4.2l4-.6L6 0z"/></svg><span class="upp mono-b">Rate</span></button>
+            <button class="micro-btn" id="btnShareHome"><svg viewBox="0 0 11 12" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="2" r="1.6" stroke="currentColor" stroke-width="1.2"/><circle cx="2" cy="6" r="1.6" stroke="currentColor" stroke-width="1.2"/><circle cx="9" cy="10" r="1.6" stroke="currentColor" stroke-width="1.2"/><path d="M3.4 5.2L7.6 3M3.4 6.8l4.2 2.2" stroke="currentColor" stroke-width="1.2"/></svg><span class="upp mono-b">Share</span></button>
+          </div>
+          <span class="ver upp mono-b">Ver 1.2.0 • 1985-Retro</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ GAMEPLAY SCREEN ============ -->
+  <section class="screen" id="screen-game">
+    <div class="game-content">
+      <div class="hud">
+        <div class="hud-best">
+          <svg viewBox="0 0 10 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 0l2.5 5.2L13 6l-4 3.9.9 5.5L5 12.4 0 15.4l.9-5.5L-3 6l5.5-.8L5 0z" transform="translate(-1.5)" fill="currentColor"/></svg>
+          <div><div class="lbl upp mono-b">Best</div><div class="val mono-b" id="hudBest">0</div></div>
+        </div>
+        <div class="hud-score"><span class="mono-b" id="hudScore">0</span></div>
+        <button class="hud-pause" id="btnPause" aria-label="Pause">
+          <svg id="pauseIcon" viewBox="0 0 14 14" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="0" width="4" height="14"/><rect x="8" y="0" width="4" height="14"/></svg>
+        </button>
+      </div>
+
+      <div class="viewport" id="viewport">
+        <div class="vp-clouds">
+          <div class="vp-cloud" id="cloud1" style="width:96px;height:32px;top:40px;"></div>
+          <div class="vp-cloud" id="cloud2" style="width:70px;height:24px;top:120px;"></div>
+        </div>
+        <div class="vp-city">
+          <span style="width:12%;height:64px;"></span>
+          <span style="width:8%;height:96px;"></span>
+          <span style="width:16%;height:48px;"></span>
+          <span style="width:10%;height:112px;"></span>
+          <span style="width:14%;height:80px;"></span>
+          <span style="width:9%;height:56px;"></span>
+        </div>
+
+        <div id="pipesLayer"></div>
+
+        <div class="bird" id="bird">
+          <div class="bird-body">
+            <div class="bird-crest"></div>
+            <div class="bird-belly"></div>
+            <div class="bird-eye"><div class="bird-pupil"></div></div>
+            <div class="bird-wing"></div>
+          </div>
+          <div class="bird-beak"></div>
+        </div>
+
+        <div class="vp-ground">
+          <div class="vp-grass scrolling"></div>
+          <div class="vp-dirt scrolling"></div>
+        </div>
+
+        <div class="tap-hint" id="tapHint">
+          <div class="tap-card"><svg viewBox="0 0 15 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 8V3a1.5 1.5 0 013 0v4M8 7V2a1.5 1.5 0 013 0v5M11 8V4a1.5 1.5 0 013 0v6c0 3.3-2.2 6-6 6s-5.5-2-6.5-4L.5 9.6a1.3 1.3 0 012.2-1.3L5 11" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"/></svg><span class="mono-b upp">Tap to Flap!</span></div>
+          <div class="tap-sub mono-b upp">Dodge the Green Pipes</div>
+        </div>
+
+        <div class="pause-overlay">
+          <div class="big mono-b upp">Paused</div>
+          <div class="small mono-b upp">Tap pause to resume</div>
+        </div>
+        <div class="hit-flash" id="hitFlash"></div>
+      </div>
+
+      <div class="controls-row">
+        <button class="flap-btn" id="btnFlap">
+          <svg viewBox="0 0 11 13" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 0l11 6.5L0 13V0z" fill="currentColor"/></svg>
+          <span class="mono-b upp">Flap (Space / Tap)</span>
+        </button>
+        <button class="sfx-btn-lg" id="btnGameSfx2" aria-label="Toggle sound"></button>
+      </div>
+
+      <div class="ticker">
+        <div class="ticker-left">
+          <span class="ticker-tag mono-b upp">Arcade Hall</span>
+          <span class="ticker-txt mono-b">CHAMPION: "PIX" - 88 PTS</span>
+        </div>
+        <span class="ticker-rank mono-b upp">Rank #09</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ GAME OVER SCREEN ============ -->
+  <section class="screen" id="screen-over">
+    <div class="over-content">
+      <div class="crash">
+        <div class="crash-cloud" style="width:60px;height:20px;left:10%;top:14px;border-radius:6px;"></div>
+        <div class="crash-cloud" style="width:44px;height:16px;right:14%;top:8px;border-radius:6px;"></div>
+        <div class="crash-pipe" style="left:20%;top:0;height:64px;"></div>
+        <div class="crash-pipe" style="right:16%;top:0;height:42px;"></div>
+        <div class="crash-vignette">
+          <div class="crash-tag mono-b upp">Run Finished</div>
+        </div>
+        <div class="crash-bird" id="crashBird">
+          <div class="sweat" style="width:6px;height:8px;left:2px;top:-8px;"></div>
+          <div class="sweat" style="width:8px;height:10px;right:0;top:-10px;"></div>
+          <div class="bird-body" style="position:absolute;inset:0;">
+            <div class="bird-crest"></div>
+            <div class="bird-belly"></div>
+            <div class="bird-eye"><div class="bird-pupil"></div></div>
+            <div class="bird-wing"></div>
+          </div>
+          <div class="bird-beak"></div>
+        </div>
+      </div>
+
+      <div class="banner-wrap">
+        <div class="banner"><h1 class="mono-b upp">Game Over</h1></div>
+        <div class="banner-sub"><i></i><span class="mono-b">TAP TO CONTEMPLATE YOUR FATE</span><i></i></div>
+      </div>
+
+      <div class="score-panel">
+        <div class="rivet tl"></div><div class="rivet tr"></div><div class="rivet bl"></div><div class="rivet br"></div>
+        <div class="panel-grid">
+          <div class="medal-slot">
+            <span class="lbl upp mono-b">Medal</span>
+            <div class="medal-gfx"><div class="ring" id="overMedalRing"><svg viewBox="0 0 20 20" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M10 1l2.2 4.6L17 6.3l-3.5 3.4.8 4.8L10 12.2l-4.3 2.3.8-4.8L3 6.3l4.8-.7L10 1z"/></svg></div></div>
+            <span class="medal-name mono-b upp" id="overMedalName">—</span>
+          </div>
+          <div class="score-col">
+            <div class="score-box">
+              <div class="row"><span class="lbl upp mono-b">Score</span></div>
+              <span class="num mono-b" id="overScore">0</span>
+            </div>
+            <div class="score-box best">
+              <div class="row"><span class="lbl upp mono-b">Best</span><span class="new-badge mono-b upp" id="overNewBadge">New!</span></div>
+              <span class="num mono-b" id="overBest">0</span>
+            </div>
+          </div>
+        </div>
+        <div class="strip">
+          <div class="strip-left"><svg viewBox="0 0 11 13" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 0v13M1 1h8l-2 2.5L9 6H1" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="upp mono-b">Pipes Cleared</span></div>
+          <span class="strip-val mono-b" id="overPipes">0 / 0</span>
+        </div>
+      </div>
+
+      <button class="btn-replay" id="btnReplay">
+        <svg viewBox="0 0 11 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 0l11 7-11 7V0z" fill="currentColor"/></svg>
+        <span class="mono-b upp">Play Again</span>
+      </button>
+      <div class="btn-row2">
+        <button class="btn-share" id="btnShareOver"><svg viewBox="0 0 14 15" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="2.5" r="2" stroke="currentColor" stroke-width="1.3"/><circle cx="2.5" cy="7.5" r="2" stroke="currentColor" stroke-width="1.3"/><circle cx="11" cy="12.5" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M4.3 6.3L9 3.6M4.3 8.7L9 11.4" stroke="currentColor" stroke-width="1.3"/></svg><span class="mono-b upp">Share</span></button>
+        <button class="btn-ranks" data-toast="Global rankings coming soon!"><svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 1l1.6 3.3L12 4.8l-2.5 2.4.6 3.5L7 9.1 3.9 10.7l.6-3.5L2 4.8l3.4-.5L7 1z" fill="currentColor"/></svg><span class="mono-b upp">Ranks</span></button>
+      </div>
+
+      <div class="rivals">
+        <div class="rivals-head">
+          <div class="rivals-head-l"><svg viewBox="0 0 12 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 0l1.6 3.3L11 3.8 8.5 6.2l.6 3.5L6 8.1 2.9 9.7l.6-3.5L0 3.8l3.4-.5L6 0z" fill="currentColor"/></svg><span class="upp mono-b">Nearby Arcade Rivals</span></div>
+          <span class="rivals-head-r mono-b" id="overPercentile">Top 50%</span>
+        </div>
+        <div id="rivalsList"></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============ CONFIG ============ */
+  var GRAVITY = 1500;          // px/s^2
+  var FLAP_V = -430;           // px/s
+  var MAX_FALL = 620;          // px/s
+  var PIPE_SPEED = 145;        // px/s
+  var PIPE_WIDTH = 52;
+  var PIPE_GAP = 158;          // px
+  var PIPE_SPACING = 200;      // px between pipe pairs
+  var GROUND_H = 64;
+  var BIRD_W = 36, BIRD_H = 28;
+  var BIRD_X_FRAC = 0.22;
+
+  var TIERS = [
+    { key:'bronze',   min:10, label:'BRONZE',   c1:'#e0a35d', c2:'#8a5223' },
+    { key:'silver',   min:25, label:'SILVER',   c1:'#dfe4ea', c2:'#8b93a0' },
+    { key:'gold',     min:40, label:'GOLD',     c1:'#ffd85e', c2:'#8a6300' },
+    { key:'platinum', min:60, label:'PLATINUM', c1:'#d9f7ff', c2:'#4a8fa3' }
+  ];
+
+  /* ============ STATE ============ */
+  var state = 'home'; // home | ready | playing | paused | gameover
+  var soundOn = true;
+  var best = 0;
+  var score = 0;
+  var birdY = 0, birdV = 0, birdRot = 0;
+  var pipes = [];
+  var lastPipeX = 0;
+  var rafId = null;
+  var lastTs = 0;
+  var flapAnimTimer = null;
+
+  /* ============ DOM ============ */
+  var $ = function(id){ return document.getElementById(id); };
+  var screens = { home: $('screen-home'), game: $('screen-game'), over: $('screen-over') };
+  var viewport = $('viewport');
+  var pipesLayer = $('pipesLayer');
+  var birdEl = $('bird');
+  var tapHint = $('tapHint');
+  var hitFlash = $('hitFlash');
+  var toastEl = $('toast');
+
+  /* ============ UTIL ============ */
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+  function rand(a,b){ return a + Math.random()*(b-a); }
+  function fmt(n){ return String(Math.round(n)); }
+  function fmtRank(n){ n = Math.max(1, Math.round(n)); return '# ' + n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+  var toastTimer = null;
+  function showToast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastEl.classList.remove('show'); }, 1800);
+  }
+
+  function loadBest(){
+    try{
+      var v = localStorage.getItem('flappyBestScore');
+      return v ? parseInt(v,10) || 0 : 0;
+    }catch(e){ return 0; }
+  }
+  function saveBest(v){
+    try{ localStorage.setItem('flappyBestScore', String(v)); }catch(e){}
+  }
+
+  /* ============ SOUND (WebAudio, no assets) ============ */
+  var actx = null;
+  function ctx(){
+    if(!actx){
+      try{ actx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ actx=null; }
+    }
+    return actx;
+  }
+  function beep(freq, dur, type, gain, delay){
+    if(!soundOn) return;
+    var a = ctx(); if(!a) return;
+    try{
+      var t0 = a.currentTime + (delay||0);
+      var osc = a.createOscillator();
+      var g = a.createGain();
+      osc.type = type || 'square';
+      osc.frequency.setValueAtTime(freq, t0);
+      g.gain.setValueAtTime(0, t0);
+      g.gain.linearRampToValueAtTime(gain||0.09, t0+0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, t0+dur);
+      osc.connect(g); g.connect(a.destination);
+      osc.start(t0); osc.stop(t0+dur+0.02);
+    }catch(e){}
+  }
+  function sfxFlap(){ beep(520,0.09,'square',0.07); }
+  function sfxScore(){ beep(740,0.08,'square',0.08); beep(980,0.09,'square',0.07,0.07); }
+  function sfxHit(){ beep(160,0.28,'sawtooth',0.10); beep(90,0.32,'square',0.08,0.05); }
+  function sfxUi(){ beep(420,0.05,'square',0.05); }
+
+  /* ============ ICONS: speaker (shared) ============ */
+  function speakerSvg(on){
+    if(on){
+      return '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 6v4h3l4 3V3L5 6H2z" fill="currentColor"/><path d="M11 5.5a4 4 0 010 5.5M13 3.5a7.5 7.5 0 010 9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
+    }
+    return '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 6v4h3l4 3V3L5 6H2z" fill="currentColor"/><path d="M11.5 6l3.5 4M15 6l-3.5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+  }
+  var sfxTargets = ['btnHomeSfx2','btnGameSfx2'];
+  function renderSfxIcons(){
+    sfxTargets.forEach(function(id){
+      var el = $(id);
+      if(el) el.innerHTML = speakerSvg(soundOn);
+    });
+  }
+  function toggleSound(){
+    soundOn = !soundOn;
+    renderSfxIcons();
+    if(soundOn) sfxUi();
+  }
+  sfxTargets.forEach(function(id){
+    var el = $(id);
+    if(el) el.addEventListener('click', function(e){ e.stopPropagation(); toggleSound(); });
+  });
+
+  /* ============ MEDALS ============ */
+  function getMedalInfo(s){
+    var current = null, next = null;
+    for(var i=0;i<TIERS.length;i++){
+      if(s >= TIERS[i].min) current = TIERS[i];
+      else { next = TIERS[i]; break; }
+    }
+    var curMin = current ? current.min : 0;
+    var nextMin = next ? next.min : curMin;
+    var progress = next ? clamp((s-curMin)/(nextMin-curMin), 0, 1) : 1;
+    return { current: current, next: next, curMin: curMin, nextMin: nextMin, progress: progress };
+  }
+
+  function updateHomeMedalUI(){
+    var info = getMedalInfo(best);
+    $('homeBest').textContent = fmt(best);
+    $('homeMedalTag').textContent = info.current ? info.current.label.slice(0,4) : '—';
+    $('homeTier').textContent = fmtRank(50000 - best*420);
+    if(info.next){
+      $('homeNextMedal').textContent = 'NEXT MEDAL: ' + info.next.label;
+      $('homeProgTxt').textContent = fmt(best) + '/' + info.next.min + ' PIPES';
+    } else {
+      $('homeNextMedal').textContent = 'MAX TIER REACHED';
+      $('homeProgTxt').textContent = fmt(best) + ' PIPES';
+    }
+    $('homeProgFill').style.width = (info.progress*100) + '%';
+  }
+
+  function ringGradient(tier){
+    if(!tier) return { bg:'linear-gradient(135deg,#e7e2c6,#b9b48f)', shadow:'#7a765a' };
+    return { bg:'linear-gradient(135deg,'+tier.c1+','+tier.c2+')', shadow:tier.c2 };
+  }
+
+  /* ============ SCREEN SWITCH ============ */
+  function showScreen(name){
+    Object.keys(screens).forEach(function(k){
+      screens[k].classList.toggle('active', k===name);
+    });
+    if(screens[name]) screens[name].scrollTop = 0;
+  }
+
+  /* ============ HOME ============ */
+  (function initMascot(){
+    var stage = $('mascotStage');
+    stage.innerHTML =
+      '<div class="bird" style="position:relative;left:0;transform:scale(2.15);transform-origin:left center;margin-left:26px;">' +
+        '<div class="bird-body"><div class="bird-crest"></div><div class="bird-belly"></div>' +
+        '<div class="bird-eye"><div class="bird-pupil"></div></div><div class="bird-wing"></div></div>' +
+        '<div class="bird-beak"></div>' +
+      '</div>';
+    stage.addEventListener('click', function(){
+      var b = stage.querySelector('.bird');
+      b.classList.add('flap');
+      sfxFlap();
+      setTimeout(function(){ b.classList.remove('flap'); }, 140);
+    });
+  })();
+
+  $('btnStart').addEventListener('click', function(){ goToGame(true); });
+
+  document.querySelectorAll('[data-toast]').forEach(function(btn){
+    btn.addEventListener('click', function(){ sfxUi(); showToast(btn.getAttribute('data-toast')); });
+  });
+
+  $('btnShareHome').addEventListener('click', doShare);
+  $('btnShareOver').addEventListener('click', doShare);
+  function doShare(){
+    var text = 'My best score in Flappy Bird Retro Arcade: ' + best + ' points! 🐤';
+    if(navigator.share){
+      navigator.share({ text:text }).catch(function(){});
+    } else if(navigator.clipboard){
+      navigator.clipboard.writeText(text).then(function(){ showToast('Score copied to clipboard!'); }).catch(function(){ showToast(text); });
+    } else {
+      showToast(text);
+    }
+  }
+
+  /* ============ GAMEPLAY SETUP ============ */
+  function goToGame(reset){
+    showScreen('game');
+    resetRun();
+    state = 'ready';
+    viewport.classList.remove('paused');
+    tapHint.classList.remove('hidden');
+    setPauseIcon(false);
+    updateHud();
+    startIdleLoop();
+  }
+  function resetRun(){
+    score = 0;
+    pipes.forEach(function(p){ if(p.el && p.el.parentNode) p.el.parentNode.removeChild(p.el); });
+    pipes = [];
+    lastPipeX = 0;
+    birdY = viewportH()/2 - BIRD_H/2;
+    birdV = 0;
+    birdRot = 0;
+    positionBird();
+  }
+
+  function viewportW(){ return viewport.clientWidth || 358; }
+  function viewportH(){ return viewport.clientHeight || 556; }
+  function playH(){ return viewportH() - GROUND_H; }
+
+  function positionBird(){
+    birdEl.style.transform = 'translateY(' + birdY.toFixed(1) + 'px) rotate(' + birdRot.toFixed(1) + 'deg)';
+  }
+
+  function updateHud(){
+    $('hudScore').textContent = fmt(score);
+    $('hudBest').textContent = fmt(best);
+  }
+
+  /* idle bob loop while state === ready (bird gently floats, no gravity) */
+  var idleRaf = null, idleT = 0, idleLast = 0;
+  function startIdleLoop(){
+    cancelAnimationFrame(idleRaf);
+    idleLast = performance.now();
+    function step(ts){
+      if(state !== 'ready'){ return; }
+      var dt = Math.min((ts-idleLast)/1000, 0.05); idleLast = ts; idleT += dt;
+      birdY = (viewportH()/2 - BIRD_H/2) + Math.sin(idleT*2.4)*8;
+      birdRot = Math.sin(idleT*2.4)*6;
+      positionBird();
+      idleRaf = requestAnimationFrame(step);
+    }
+    idleRaf = requestAnimationFrame(step);
+  }
+
+  function stopLoop(){
+    cancelAnimationFrame(rafId); rafId = null;
+    cancelAnimationFrame(idleRaf); idleRaf = null;
+  }
+
+  /* ============ INPUT ============ */
+  function handleFlapInput(){
+    if(state === 'home'){ return; }
+    if(state === 'ready'){
+      state = 'playing';
+      cancelAnimationFrame(idleRaf);
+      tapHint.classList.add('hidden');
+      birdV = FLAP_V;
+      flapVisual();
+      sfxFlap();
+      lastTs = performance.now();
+      rafId = requestAnimationFrame(loop);
+      return;
+    }
+    if(state === 'playing'){
+      birdV = FLAP_V;
+      flapVisual();
+      sfxFlap();
+    }
+  }
+  function flapVisual(){
+    birdEl.classList.add('flap');
+    clearTimeout(flapAnimTimer);
+    flapAnimTimer = setTimeout(function(){ birdEl.classList.remove('flap'); }, 110);
+  }
+
+  viewport.addEventListener('pointerdown', function(e){
+    if(state === 'paused') return;
+    handleFlapInput();
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.code === 'Space' || e.code === 'ArrowUp'){
+      if(screens.game.classList.contains('active')){
+        e.preventDefault();
+        if(state === 'paused') return;
+        handleFlapInput();
+      }
+    }
+  });
+  $('btnFlap').addEventListener('click', function(e){ e.stopPropagation(); if(state!=='paused') handleFlapInput(); });
+
+  /* ============ PAUSE ============ */
+  function setPauseIcon(paused){
+    $('pauseIcon').innerHTML = paused
+      ? '<path d="M2 0l10 7-10 7V0z"/>'
+      : '<rect x="2" y="0" width="4" height="14"/><rect x="8" y="0" width="4" height="14"/>';
+  }
+  $('btnPause').addEventListener('click', function(e){
+    e.stopPropagation();
+    if(state === 'playing'){
+      state = 'paused';
+      viewport.classList.add('paused');
+      cancelAnimationFrame(rafId);
+      setPauseIcon(true);
+      sfxUi();
+    } else if(state === 'paused'){
+      state = 'playing';
+      viewport.classList.remove('paused');
+      setPauseIcon(false);
+      lastTs = performance.now();
+      rafId = requestAnimationFrame(loop);
+      sfxUi();
+    } else if(state === 'ready'){
+      // nothing to pause yet
+    }
+  });
+
+  /* ============ PIPES ============ */
+  function spawnPipe(){
+    var H = playH();
+    var margin = 46;
+    var gapY = rand(margin + PIPE_GAP/2, H - margin - PIPE_GAP/2);
+    var el = document.createElement('div');
+    el.className = 'pipe';
+    el.style.width = PIPE_WIDTH + 'px';
+    el.style.top = '0';
+    el.style.bottom = '0';
+    el.style.left = viewportW() + 'px';
+
+    var topH = Math.max(0, gapY - PIPE_GAP/2);
+    var bottomTop = gapY + PIPE_GAP/2;
+    var bottomH = Math.max(0, H - bottomTop);
+
+    var topSeg = document.createElement('div');
+    topSeg.className = 'pipe-seg';
+    topSeg.style.top = '0'; topSeg.style.height = topH + 'px';
+    var topCap = document.createElement('div');
+    topCap.className = 'pipe-cap';
+    topCap.style.top = Math.max(0, topH-16) + 'px';
+
+    var botSeg = document.createElement('div');
+    botSeg.className = 'pipe-seg';
+    botSeg.style.top = bottomTop + 'px'; botSeg.style.height = bottomH + 'px';
+    var botCap = document.createElement('div');
+    botCap.className = 'pipe-cap';
+    botCap.style.top = bottomTop + 'px';
+
+    el.appendChild(topSeg); el.appendChild(topCap);
+    el.appendChild(botSeg); el.appendChild(botCap);
+    pipesLayer.appendChild(el);
+
+    pipes.push({ el:el, x:viewportW(), topH:topH, bottomTop:bottomTop, scored:false });
+    lastPipeX = viewportW();
+  }
+
+  function updatePipes(dt, birdCenterX){
+    lastPipeX -= PIPE_SPEED*dt;
+    for(var i=pipes.length-1;i>=0;i--){
+      var p = pipes[i];
+      p.x -= PIPE_SPEED*dt;
+      p.el.style.left = p.x + 'px';
+
+      if(!p.scored && (p.x + PIPE_WIDTH) < birdCenterX){
+        p.scored = true; score++; sfxScore(); updateHud();
+      }
+      if(p.x + PIPE_WIDTH < -4){
+        p.el.parentNode.removeChild(p.el);
+        pipes.splice(i,1);
+      }
+    }
+    if(viewportW() - lastPipeX >= PIPE_SPACING){
+      spawnPipe();
+    }
+  }
+
+  function checkCollision(){
+    var bx = viewportW()*BIRD_X_FRAC;
+    var pad = 5;
+    var bLeft = bx+pad, bRight = bx+BIRD_W-pad, bTop = birdY+pad, bBottom = birdY+BIRD_H-pad;
+    var H = playH();
+    if(bBottom >= H){ return true; }
+    for(var i=0;i<pipes.length;i++){
+      var p = pipes[i];
+      var pLeft = p.x, pRight = p.x+PIPE_WIDTH;
+      if(bRight > pLeft && bLeft < pRight){
+        if(bTop < p.topH || bBottom > p.bottomTop){ return true; }
+      }
+    }
+    return false;
+  }
+
+  /* ============ MAIN LOOP ============ */
+  function loop(ts){
+    var dt = Math.min((ts-lastTs)/1000, 0.032);
+    lastTs = ts;
+
+    birdV = clamp(birdV + GRAVITY*dt, -Infinity, MAX_FALL);
+    birdY += birdV*dt;
+    if(birdY < 0){ birdY = 0; if(birdV<0) birdV = 0; }
+
+    birdRot = clamp((birdV/MAX_FALL)*90, -25, 90);
+    positionBird();
+
+    var bx = viewportW()*BIRD_X_FRAC + BIRD_W/2;
+    updatePipes(dt, bx);
+
+    if(checkCollision()){
+      endGame();
+      return;
+    }
+
+    rafId = requestAnimationFrame(loop);
+  }
+
+  /* ============ GAME OVER ============ */
+  function endGame(){
+    state = 'gameover';
+    stopLoop();
+    sfxHit();
+    hitFlash.classList.remove('on'); void hitFlash.offsetWidth; hitFlash.classList.add('on');
+
+    var isNew = score > best;
+    if(isNew){ best = score; saveBest(best); }
+
+    setTimeout(function(){ populateGameOver(isNew); showScreen('over'); }, 420);
+  }
+
+  function populateGameOver(isNew){
+    $('overScore').textContent = fmt(score);
+    $('overBest').textContent = fmt(best);
+    $('overNewBadge').classList.toggle('show', isNew);
+    $('overPipes').textContent = fmt(score) + ' / ' + fmt(score);
+
+    var info = getMedalInfo(score);
+    var g = ringGradient(info.current);
+    var ring = $('overMedalRing');
+    ring.style.background = g.bg;
+    ring.style.boxShadow = '0 2px 0 ' + g.shadow;
+    $('overMedalName').textContent = info.current ? info.current.label : 'NO MEDAL';
+
+    var pct = clamp(Math.round(60 - score*0.7), 1, 97);
+    $('overPercentile').textContent = 'Top ' + pct + '%';
+
+    renderRivals();
+    updateHomeMedalUI();
+
+    // reset crash bird flap pose randomly for variety
+    var wing = document.querySelector('#crashBird .bird-wing');
+    if(wing) wing.style.transform = 'rotate(-18deg)';
+  }
+
+  function renderRivals(){
+    var rivals = [
+      { rank:41, name:'PixelPuffer', score:45, you:false, tag:'P1' },
+      { rank:48, name:'FlappyAce', score:score, you:true, tag:'YOU' },
+      { rank:53, name:'WingKing_99', score:39, you:false, tag:'GG' }
+    ];
+    rivals.sort(function(a,b){ return b.score-a.score; });
+    var html = '';
+    rivals.forEach(function(r){
+      html += '<div class="rival-row' + (r.you?' you':'') + '">' +
+        '<div class="rival-l">' +
+          '<span class="rival-rank mono-b">#' + r.rank + '</span>' +
+          '<span class="rival-avatar mono-b">' + r.tag + '</span>' +
+          '<span class="rival-name mono-b">' + r.name + '</span>' +
+        '</div>' +
+        '<span class="rival-score mono-b">' + fmt(r.score) + ' PTS</span>' +
+      '</div>';
+    });
+    $('rivalsList').innerHTML = html;
+  }
+
+  $('btnReplay').addEventListener('click', function(){ sfxUi(); goToGame(true); });
+
+  /* ============ DECOR: clouds drift ============ */
+  (function driftClouds(){
+    var c1 = $('cloud1'), c2 = $('cloud2');
+    var x1 = -30, x2 = viewportW ? 380 : 380;
+    function step(){
+      if(c1){
+        x1 += 0.10;
+        if(x1 > viewportW()+40) x1 = -110;
+        if(!viewport.classList.contains('paused')) c1.style.transform = 'translateX(' + x1 + 'px)';
+      }
+      if(c2){
+        x2 -= 0.055;
+        if(x2 < -100) x2 = viewportW()+40;
+        if(!viewport.classList.contains('paused')) c2.style.transform = 'translateX(' + x2 + 'px)';
+      }
+      requestAnimationFrame(step);
+    }
+    c1 && (c1.style.left='0');
+    c2 && (c2.style.left='0');
+    requestAnimationFrame(step);
+  })();
+
+  /* ============ INIT ============ */
+  best = loadBest();
+  renderSfxIcons();
+  updateHomeMedalUI();
+  showScreen('home');
+
+  window.addEventListener('resize', function(){
+    if(state === 'ready' || state === 'playing' || state === 'paused'){
+      // keep bird within bounds on resize
+      birdY = clamp(birdY, 0, Math.max(0, playH()-BIRD_H));
+      positionBird();
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
